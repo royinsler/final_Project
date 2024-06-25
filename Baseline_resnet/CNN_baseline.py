@@ -1,4 +1,4 @@
-from resize_data import resize_labeled_data
+# from resize_data import resize_labeled_data
 import torch.distributed.rpc as rpc
 import torch
 import os
@@ -6,6 +6,7 @@ from datasets import load_dataset
 import os
 import random
 from PIL import ImageDraw, ImageFont, Image
+from torch import nn
 from transformers import ViTFeatureExtractor, ResNetForImageClassification
 import torch
 import numpy as np
@@ -36,10 +37,10 @@ data_dir_tr = '/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Train/'
 data_dir_tes = '/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Test/'
 data_dir_val = '/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Validation/'
 datasets_paths=[data_dir_tr,data_dir_tes,data_dir_val]
-for ds in datasets_paths:
-    print('*** Resizing the Data from '+ds+' ***')
-    resize_labeled_data(ds, 224, plot_example_labels=False)
-    print('*** Resizing data finished successfully for '+ds+' ***')
+# for ds in datasets_paths:
+#     print('*** Resizing the Data from '+ds+' ***')
+#     resize_labeled_data(ds, 224, plot_example_labels=False)
+#     print('*** Resizing data finished successfully for '+ds+' ***')
 # print(X)
 # print(y)
 
@@ -54,16 +55,20 @@ labels = [0, 1]
 batch_size = 8
 patch_size = 4
 lr_array = [4]
+# os.environment['TRANSFORMERS_CACHE'] = '/mnt/data/'
 
 # for model_type in model_types:
 for cur_lr in lr_array:
+    # print('test')
     lr_str = str(cur_lr)
     lr = 1 * 10 ** (-cur_lr)
     save_name = str("resnet101-DBT-384-"+str(patch_size)+"-lr"+lr_str)
 
     clsss_proportion = len(os.listdir(os.path.join(dataset_path,"Train/Negative")))/len(os.listdir(os.path.join(dataset_path,"Train/Positive")))
     # ------------------------------------------- Define the Data ---------------------------------------------------------
-
+    torch.cuda.empty_cache()
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     dataset = load_dataset("imagefolder", data_files={"train": os.path.join(dataset_path,"Train/**"),
                                                       "test": os.path.join(dataset_path,"Test/**"),
@@ -83,7 +88,7 @@ for cur_lr in lr_array:
     #     label2id={c: str(i) for i, c in enumerate(labels)}
     # )
     model = ResNetForImageClassification.from_pretrained("microsoft/resnet-101")
-
+    model = nn.DataParallel(model)
 
     # ------------------------------------------ Data Functions ---------------------------------------------------
     normalize = Normalize(mean=feature_extractor.image_mean, std=feature_extractor.image_std)
@@ -158,7 +163,13 @@ for cur_lr in lr_array:
             # forward pass
             outputs = model(**inputs)
             logits = outputs.get("logits")
+            last_item_index = len(model.classifier) - 1
+            old_fc = self.model.module.classifier.__getitem__(last_item_index)
+            new_fc = nn.Linear(in_features=old_fc.in_features,
+                               out_features=129, bias=True)
+            model.classifier.__setitem__(last_item_index, new_fc)
             loss_fct = torch.nn.CrossEntropyLoss(weight=torch.tensor([1.0, clsss_proportion]).to("cuda"))
+            print()
             loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             return (loss, outputs) if return_outputs else loss
 
