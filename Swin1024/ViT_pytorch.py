@@ -25,27 +25,22 @@ from torchvision import datasets, transforms, models
 from torchvision.models import resnet101, ResNet101_Weights
 import seaborn as sns
 from sklearn.metrics import classification_report
+import timm
 
 
 # Define the model with global average pooling and prediction layers
-class MyModel(nn.Module):
-    def __init__(self, num_classes):
-        super(MyModel, self).__init__()
-        self.base_model = resnet101(weights=ResNet101_Weights.DEFAULT)
-        in_features = self.base_model.fc.in_features
-        self.base_model.fc = nn.Identity()
-        self.global_average_layer = nn.AdaptiveAvgPool2d((1, 1))
-        self.prediction_layer = nn.Linear(in_features,num_classes)
+class ViT(nn.Module):
+    def __init__(self, num_classes=1):
+        super(ViT, self).__init__()
+        self.model = timm.create_model('vit_base_patch16_224', pretrained=True)
+        self.model.head = nn.Linear(self.model.head.in_features, num_classes)
 
     def forward(self, x):
-        x = self.base_model(x)
-        # x = self.global_average_layer(x)
-        # x = torch.flatten(x, 1)
-        x = self.prediction_layer(x)
-        return x
+        return self.model(x)
+
 
 # Define the train and evaluation functions
-def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs, device):
+def train_model(model, dataloaders, criterion, optimizer, scheduler, class_proportions ,num_epochs, device):
     since = time.time()
 
     best_model_wts = copy.deepcopy(model.state_dict())
@@ -67,9 +62,12 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs,
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
-                # print(inputs.shape)
+                # print(inputs)
+                # print(labels)
                 inputs = inputs.to(device)
                 labels = labels.to(device).float().view(-1, 1)
+
+                # print((labels[0:20]))
 
                 # Zero the parameter gradients
                 optimizer.zero_grad()
@@ -78,9 +76,16 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs,
                     outputs = model(inputs)
                     # print(outputs)
                     probs = torch.sigmoid(outputs) >= 0.5
+                    # print(probs)
                     preds = probs >= 0.5  # Directly use the boolean tensor
                     # print(preds)
-                    loss = criterion(torch.sigmoid(outputs), labels)
+                    # loss_fct = criterion()
+                    # loss = loss_fct(torch.sigmoid(outputs), labels)
+                    loss = criterion(outputs, labels)
+                    # class_proportions = class_proportions.to(device)
+                    # weighted_loss = loss * class_proportions   # Apply weights
+                    # loss = weighted_loss.mean()  # Take the mean of the weighted losses
+
                     # loss.requires_grad = True
 
                     # Backward + optimize only if in training phase
@@ -90,12 +95,12 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs,
 
                 # Statistics
                 running_loss += loss.item() * inputs.size(0)
-                # print(torch.sum(preds == labels.data))
+                # print(torch.sum(probs == labels.data))
                 running_corrects += torch.sum(preds == labels.data)
 
             if phase == 'train':
                 scheduler.step()
-
+            print(len(dataloaders[phase].dataset))
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
@@ -355,7 +360,7 @@ class CustomDataset(Dataset):
                     self.file_list.append(os.path.join(class_dir, file))
                     self.label_list.append(class_idx)
             else:
-                for file in os.listdir(class_dir)[0:1250]:
+                for file in os.listdir(class_dir)[0:1500]:
                     self.file_list.append(os.path.join(class_dir, file))
                     self.label_list.append(class_idx)
 
@@ -433,20 +438,28 @@ if __name__ == '__main__':
     dataset_statistics(dataloaders['val'], "Validation")
     dataset_statistics(dataloaders['test'], "Test")
 
-    model = MyModel(num_classes=1)
+    model = ViT()
     model = model.to(device)
+
+    negative_count = len(os.listdir(os.path.join(train_dir, "Negative")))
+    positive_count = len(os.listdir(os.path.join(train_dir, "Positive")))
+    total_count = negative_count + positive_count
+    negative_proportion = negative_count / total_count
+    positive_proportion = positive_count / total_count
+    class_proportions = torch.tensor([negative_proportion, positive_proportion])
 
     # Freeze the convolutional layers
     # for param in model.parameters():
     #     param.requires_grad = False
 
     # Loss function and optimizer
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCELoss(reduction='none')
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=0.96)
 
     # Train the model
-    model = train_model(model, dataloaders, criterion, optimizer, scheduler, num_epochs=num_epochs, device=device)
+    model = train_model(model, dataloaders, criterion, optimizer, scheduler, class_proportions, num_epochs=num_epochs, device=device)
 
     # Evaluate the model
     evaluate_model(model, dataloaders, criterion, device=device)
