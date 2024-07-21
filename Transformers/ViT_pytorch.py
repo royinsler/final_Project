@@ -32,7 +32,6 @@ import timm
 class ViT(nn.Module):
     def __init__(self, num_classes=1):
         super(ViT, self).__init__()
-        self.model = timm.create_model('vit_base_patch16_224', pretrained=True)
         self.model.head = nn.Linear(self.model.head.in_features, num_classes)
 
     def forward(self, x):
@@ -389,6 +388,7 @@ def create_dataloaders(train_dir, val_dir, test_dir, batch_size, num_workers):
     ])
 
     val_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
@@ -424,8 +424,8 @@ if __name__ == '__main__':
     test_dir = '/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Test'  # Should contain 'Positive' and 'Negative' subdirectories
     batch_size = 32
     num_workers = 4
-    num_epochs = 100
-    learning_rate = 0.01
+    num_epochs = 25
+    learning_rate = 1e-4
 
     # Device configuration
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -440,26 +440,35 @@ if __name__ == '__main__':
 
     model = ViT()
     model = model.to(device)
+    dataset_path = '/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/'
 
-    negative_count = len(os.listdir(os.path.join(train_dir, "Negative")))
-    positive_count = len(os.listdir(os.path.join(train_dir, "Positive")))
-    total_count = negative_count + positive_count
-    negative_proportion = negative_count / total_count
-    positive_proportion = positive_count / total_count
-    class_proportions = torch.tensor([negative_proportion, positive_proportion])
-
+    # negative_count = len(os.listdir(os.path.join(train_dir, "Negative")))
+    # positive_count = len(os.listdir(os.path.join(train_dir, "Positive")))
+    # total_count = negative_count + positive_count
+    # negative_proportion = negative_count / total_count
+    # positive_proportion = positive_count / total_count
+    # class_proportions = torch.tensor([negative_proportion, positive_proportion])
+    clsss_proportion_train = len(os.listdir(os.path.join(dataset_path, "Train/Negative"))) / len(
+        os.listdir(os.path.join(dataset_path, "Train/Positive")))
+    clsss_proportion = len(os.listdir(os.path.join(dataset_path, "Test/Negative"))) / len(
+        os.listdir(os.path.join(dataset_path, "Test/Positive")))
     # Freeze the convolutional layers
     # for param in model.parameters():
     #     param.requires_grad = False
 
     # Loss function and optimizer
-    criterion = nn.BCEWithLogitsLoss()
-    # criterion = nn.BCELoss(reduction='none')
+    pos_weight_train = torch.tensor([clsss_proportion_train],
+                                    dtype=torch.float32).to(
+        device)  # Replace class_weight with your positive class weight
+    criterion_train = nn.BCEWithLogitsLoss(pos_weight=pos_weight_train)
+    pos_weight = torch.tensor([clsss_proportion],
+                              dtype=torch.float32).to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)    # criterion = nn.BCELoss(reduction='none')
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100000, gamma=0.96)
 
     # Train the model
-    model = train_model(model, dataloaders, criterion, optimizer, scheduler, class_proportions, num_epochs=num_epochs, device=device)
+    model = train_model(model, dataloaders, criterion_train, optimizer, scheduler, clsss_proportion, num_epochs=num_epochs, device=device)
 
     # Evaluate the model
     evaluate_model(model, dataloaders, criterion, device=device)
