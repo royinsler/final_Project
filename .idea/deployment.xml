@@ -5,7 +5,7 @@
       <paths name="HIT">
         <serverdata>
           <mappings>
-            <mapping deploy="/mnt/md0/royi/final_Project" local="$PROJECT_DIR$" web="/" />
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
