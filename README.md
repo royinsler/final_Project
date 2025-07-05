@@ -1,4 +1,4 @@
-# final_Project
+# Final Project
 My Graduation project for my M.Sc. in Data science @HIT
 
 Project’s Objectives
