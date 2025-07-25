@@ -15,4 +15,4 @@ Project’s Objectives
 - Enhance performance by using additional deep learning architectures on DBT images.
 - By synthetically enriching the dataset, the goal is to increase both specificity and sensitivity.
 
-The first phase of the project consists of preprocessing of the data. In the second phase, we're applying a few transformer architucures on the DBT dataset to enhance today's best classification results and on the third phase we're trying to enrich the DB with more images using GenAI.
+The first phase of the project consists of preprocessing of the data. In the second phase, we're applying a few transformer architucures on the DBT dataset(with two different resolutions) to enhance today's best classification results and on the third phase we're enriching the DB with more images using GenAI, then, running our models once again.
