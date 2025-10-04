@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+#Creation of tags for specific images, based on excel
 
 train_untagged_list = os.listdir('/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Train/')
 #train_untagged_list = os.listdir(r'C:\Users\royin\PycharmProjects\final_Project\Train')
