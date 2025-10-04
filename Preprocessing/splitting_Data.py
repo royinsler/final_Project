@@ -196,11 +196,7 @@ df = pd.concat([pd.Series(removed)], ignore_index=True, axis=1)
 df.columns =['removed_slices']
 df.to_excel('removed_slices.xlsx',index = False)
 
-
-#Copy a max of 10 slices for each scan to create the db
-
-
-
+#Create an excel sheet with division of studies into the different sets (Pos/Neg/Train/Validation etc...)
 # pos_list = os.listdir('/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/New_Pos/')
 # pos_list = os.listdir(r'..\Pos\\')
 #
@@ -218,7 +214,7 @@ neg_list = os.listdir("/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Negativ
 #     if name[:6] not in uniqe_neg:
 #         uniqe_neg.append(name[:6])
 #
-# #making sure slices from the same subject won't be divided into more than one dataset
+# make sure slices from the same subject won't be divided into more than one dataset
 # import random
 # random.shuffle(uniqe_pos)
 # train_pos = uniqe_pos[:round(0.7*len(uniqe_pos))]
@@ -253,6 +249,8 @@ neg_list = os.listdir("/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Negativ
 # df = pd.concat([pd.Series(train_pos),pd.Series(train_neg), pd.Series(val_pos), pd.Series(val_neg), pd.Series(test_pos), pd.Series(test_neg)], ignore_index=True, axis=1)
 # df.columns =['train_positive', 'train_negative', 'val_positive', 'val_negative', 'test_positive', 'test_negative']
 # df.to_excel('/mnt/md0/royi/final_Project/Preprocessing/tomo_subjects_sets_all.xlsx',index = False)
+
+#Load the excel sheet
 df_ds_alloc = pd.read_excel('/mnt/md0/royi/final_Project/Preprocessing/tomo_subjects_sets_all.xlsx' ,dtype={'study_ID':str,'View':str,'Laterality':str,'Selected_Frames':str})
 
 #create the train,test and val directories (with pos+neg subdirectories) and move the relevant slices into it
@@ -390,7 +388,7 @@ for col in df_ds_alloc:
         #     to_check.append(id)
 print(to_check)
                     # print("Neg "+slice)
-#need to remove unecessary slices from train positive cases
+#removal of unecessary slices from train positive cases
 # df_pos_scans = pd.read_csv('/mnt/md0/royi/final_Project/Preprocessing/annotations_tomo.csv' ,dtype={'study_ID':str,'View':str,'Laterality':str,'Selected_Frames':str})
 # print(df_pos_scans['View'][0])
 # for frames in df_pos_scans['Selected_Frames']:
