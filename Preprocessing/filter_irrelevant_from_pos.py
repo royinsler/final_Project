@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 
+#removal of uneeded positive scans as per decided by the researcher
 train_pos_list = os.listdir('/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Train/Positive')
 val_pos_list = os.listdir('/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Validation/Positive')
 # merged_pos_list = train_pos_list + val_pos_list
