@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 #from openpyxl.workbook import Workbook
+
+
 pos_list = os.listdir('/mnt/data/soroka_tomo/segmented_DBT_slices_soroka/Positive/')
 
 df_pos_scans = pd.read_csv('/mnt/md0/royi/final_Project/Preprocessing/annotations_tomo.csv' ,dtype={'study_ID':str,'View':str,'Laterality':str,'Selected_Frames':str})
@@ -195,7 +197,7 @@ df.columns =['removed_slices']
 df.to_excel('removed_slices.xlsx',index = False)
 
 
-#we'll copy a max of 10 slices for each scan to create the db
+#Copy a max of 10 slices for each scan to create the db
 
 
 
