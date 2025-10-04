@@ -18,11 +18,8 @@ LABELS_ENCODING = {
 
 def resize_labeled_data(path: str, size: int,
                             plot_example_labels: bool = False):
-    # Loading and Labeling the data
-    labels = []
-    # images = []
+    # Loading and resizing the data
     for current_dir in os.listdir(path):
-        #if 'desktop' not in current_dir:
         print(f'Loading {current_dir}')
         for i, tr in enumerate(os.listdir(path + current_dir)):
             print(f'{current_dir}-{i}: {tr}')
@@ -37,28 +34,7 @@ def resize_labeled_data(path: str, size: int,
             normalized_img = img / 255
             img_path = path+current_dir+'/'+tr
             save_image(normalized_img, img_path)
-            # labels.append(current_dir)
-            # images.append(img)
-            # if plot_example_labels and i == 0:
-            #     print(f'{current_dir} Example Image:')
-            #     plt.imshow(img.permute(1, 2, 0), cmap='gist_gray')
-            #     plt.show()
-            # collected = gc.collect()
-            # print("Garbage collector: collected",
-            #       "%d objects." % collected)
-            # print(tr)
         print(f'finished {current_dir}')
-#                except:
- #                   if 'desktop' not in tr:
-  #                      print(f'Failed to load: {tr}')
-
-    # return torch.stack(images)
-
-
-# def convert_labels(labels: List) -> List:
-#     return [torch.tensor([LABELS_ENCODING[label]]) for label in labels]
-
-
 
 
 
